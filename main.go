@@ -1,35 +1,16 @@
-// enjoygo: a tiny Enjoy-like template engine prototype in Go
-// -----------------------------------------------------------
-// Features in this MVP:
-//   - Output expressions:  #( ... )  and  ${ ... }
-//   - Directives:          #if / #else / #end,  #for x in expr / #end,  #include "file"
-//   - Context:             map[string]any passed to Render
-//   - Expression eval:     via github.com/antonmedv/expr (safe, fast)
-//
-// Limitations (kept simple on purpose):
-//   - No #define / macro yet (easy to add later)
-//   - #include reads from a user-provided loader (here: os.DirFS)
-//   - Minimal error reporting; tune as you extend
-//
-// Usage:
-//   go mod init enjoygo-demo
-//   go get github.com/antonmedv/expr
-//   go run .
-//
-// Author: ChatGPT (prototype for discussion)
-
 package main
 
 import (
 	"bufio"
 	"errors"
 	"fmt"
-	expr "github.com/expr-lang/expr"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	expr "github.com/expr-lang/expr"
 )
 
 // -----------------------------------------------------------
@@ -421,12 +402,52 @@ func splitByRegex(s string, re *regexp.Regexp, makeNode nodeFactory) []node {
 // Expression evaluation helpers
 // -----------------------------------------------------------
 
+// preprocessNullCoalescing 预处理空安全运算符 ??
+// 将 "a ?? b" 转换为 "default(a, b)"
+func preprocessNullCoalescing(code string) string {
+	// 使用更精确的正则表达式匹配 ?? 运算符
+	// 支持括号、引号等复杂表达式
+	re := regexp.MustCompile(`([^?\s]+(?:\([^)]*\))?(?:\"[^\"]*\")?(?:\s*[^?\s]+)*)\s*\?\?\s*([^?\s]+(?:\([^)]*\))?(?:\"[^\"]*\")?(?:\s*[^?\s]+)*)`)
+	for re.MatchString(code) {
+		matches := re.FindStringSubmatch(code)
+		if len(matches) == 3 {
+			left := strings.TrimSpace(matches[1])
+			right := strings.TrimSpace(matches[2])
+			code = re.ReplaceAllString(code, fmt.Sprintf("default(%s, %s)", left, right))
+		}
+	}
+	return code
+}
+
+// defaultFunc 实现默认值函数，如果第一个参数为nil、空字符串或不存在，返回第二个参数
+func defaultFunc(a, b any) any {
+	if a == nil {
+		return b
+	}
+	if s, ok := a.(string); ok && s == "" {
+		return b
+	}
+	return a
+}
+
 func evalExpr(code string, ctx map[string]any) (any, error) {
-	program, err := expr.Compile(code, expr.Env(ctx), expr.AllowUndefinedVariables())
+	// 预处理空安全运算符
+	code = preprocessNullCoalescing(code)
+
+	// 创建包含默认函数的环境
+	env := map[string]any{
+		"default": defaultFunc,
+	}
+	// 合并用户上下文
+	for k, v := range ctx {
+		env[k] = v
+	}
+
+	program, err := expr.Compile(code, expr.Env(env), expr.AllowUndefinedVariables())
 	if err != nil {
 		return nil, err
 	}
-	return expr.Run(program, ctx)
+	return expr.Run(program, env)
 }
 
 func evalBool(code string, ctx map[string]any) (bool, error) {
@@ -453,6 +474,9 @@ func main() {
 kind: Deployment
 metadata:
   name: $(appName)
+  namespace: $(namespace ?? "default")
+  labels:
+    version: $(version ?? "v1.0.0")
 spec:
   replicas: #(replicas)
   template:
@@ -460,7 +484,10 @@ spec:
       containers:
         #for c in containers
         - name: $(c.name)
-          image: $(c.image):$(c.tag)
+          image: $(c.image):$(c.tag ?? "latest")
+          env:
+             - name: LOG_LEVEL
+               value: $(c.logLevel ?? "info")
           ports:
             #for p in c.ports
             - containerPort: $(p)
@@ -471,9 +498,11 @@ spec:
 kind: Ingress
 metadata:
   name: $(appName)-ing
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: $(ingress.rewriteTarget ?? "/")
 spec:
   rules:
-  - host: $(ingress.host)
+  - host: $(ingress.host ?? "localhost")
     http: { }
 #end
 #include "snippet.tpl"`
@@ -492,12 +521,16 @@ spec:
 		"appName":       "demo-app",
 		"replicas":      2,
 		"enableIngress": true,
+		// 故意省略 namespace 和 version 来测试默认值
 		"ingress": map[string]any{
 			"host": "demo.example.com",
+			// 故意省略 rewriteTarget 来测试默认值
 		},
 		"containers": []any{
-			map[string]any{"name": "web", "image": "nginx", "tag": "1.25", "ports": []int{80, 8080}},
-			map[string]any{"name": "sidecar", "image": "busybox", "tag": "stable", "ports": []int{9000}},
+			// 第一个容器有完整信息
+			map[string]any{"name": "web", "image": "nginx", "tag": "1.25", "logLevel": "debug", "ports": []int{80, 8080}},
+			// 第二个容器故意省略 tag 和 logLevel 来测试默认值
+			map[string]any{"name": "sidecar", "image": "busybox", "ports": []int{9000}},
 		},
 	}
 
@@ -511,6 +544,34 @@ spec:
 	w := bufio.NewWriter(os.Stdout)
 	_, _ = w.WriteString(out)
 	_ = w.Flush()
+
+	// 额外测试空安全运算符的各种用法
+	fmt.Println("\n=== 空安全运算符测试 ===")
+	testTemplate := `
+测试结果:
+1. 基本 ?? 运算符: ${name ?? "匿名用户"}
+2. 嵌套字段: ${user.email ?? "no-email@example.com"}
+3. default函数: ${default(description, "无描述")}
+4. 数字默认值: ${count ?? 0}
+5. 空字符串处理: ${emptyField ?? "默认值"}
+`
+
+	testTpl, err := eng.ParseString(testTemplate)
+	must(err)
+
+	// 测试上下文 - 故意省略一些字段来演示默认值
+	testCtx := map[string]any{
+		"name": "张三",
+		"user": map[string]any{
+			// 故意省略 email 字段
+		},
+		// 故意省略 description, count
+		"emptyField": "", // 空字符串测试
+	}
+
+	testOut, err := testTpl.Render(testCtx)
+	must(err)
+	fmt.Print(testOut)
 }
 
 func must(err error) {
