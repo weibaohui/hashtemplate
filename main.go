@@ -223,6 +223,7 @@ type parser struct {
 	cursor int
 }
 
+// newParser 创建新的模板解析器
 func newParser(s string) *parser {
 	// Normalize line endings
 	s = strings.ReplaceAll(s, "\r\n", "\n")
@@ -373,6 +374,7 @@ var (
 	reDollarExp = regexp.MustCompile(`\$\{(.*?)\}`) // non-greedy
 )
 
+// splitExprs 将包含表达式的行分割成文本节点和表达式节点
 func splitExprs(line string) []node {
 	// First process #( ... )
 	nodes := splitByRegex(line, reHashExpr, func(code string) node { return &exprNode{code: code} })
@@ -385,6 +387,8 @@ func splitExprs(line string) []node {
 			out = append(out, n)
 		}
 	}
+	// 为每行添加换行符
+	out = append(out, &textNode{text: "\n"})
 	return out
 }
 
@@ -393,7 +397,7 @@ type nodeFactory func(code string) node
 func splitByRegex(s string, re *regexp.Regexp, makeNode nodeFactory) []node {
 	locs := re.FindAllStringSubmatchIndex(s, -1)
 	if len(locs) == 0 {
-		return []node{&textNode{text: s + "\n"}}
+		return []node{&textNode{text: s}}
 	}
 	var nodes []node
 	prevEnd := 0
@@ -408,10 +412,7 @@ func splitByRegex(s string, re *regexp.Regexp, makeNode nodeFactory) []node {
 		prevEnd = end
 	}
 	if prevEnd < len(s) {
-		nodes = append(nodes, &textNode{text: s[prevEnd:] + "\n"})
-	} else {
-		// if ended exactly at end of line, still add newline
-		nodes = append(nodes, &textNode{text: "\n"})
+		nodes = append(nodes, &textNode{text: s[prevEnd:]})
 	}
 	return nodes
 }
