@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -25,39 +26,28 @@ func nullCoalesceFunc(a, b any) any {
 
 // preprocessNullCoalescing 预处理空安全运算符 ??
 // 将 "a ?? b" 转换为 "nullCoalesce(a, b)"
-// 同时将嵌套属性访问和数组索引访问转换为安全访问
 func preprocessNullCoalescing(code string) string {
 	
-	// 首先处理数组索引访问，将 arr[index] 转换为 safeIndex(arr, index)
-	indexRe := regexp.MustCompile(`(\w+)\[(\d+)\]`)
-	for indexRe.MatchString(code) {
-		matches := indexRe.FindStringSubmatch(code)
-		if len(matches) == 3 {
-			arr := matches[1]
-			index := matches[2]
-			code = indexRe.ReplaceAllString(code, fmt.Sprintf(`safeIndex(%s, %s)`, arr, index))
-		}
-	}
-	
-	// 然后处理嵌套属性访问，将 obj.prop1.prop2 转换为 safeGet(obj, "prop1.prop2")
-	// 但要避免匹配版本号等数字开头的属性
-	nestedRe := regexp.MustCompile(`([a-zA-Z_]\w*)\.([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)+)`)
-	for nestedRe.MatchString(code) {
-		matches := nestedRe.FindStringSubmatch(code)
-		if len(matches) == 3 {
-			obj := matches[1]
-			path := matches[2]
-			code = nestedRe.ReplaceAllString(code, fmt.Sprintf(`safeGet(%s, "%s")`, obj, path))
-		}
-	}
-	
-	// 最后处理 ?? 运算符 - 递归处理所有的 ?? 运算符
+	// 处理 ?? 运算符 - 递归处理所有的 ?? 运算符
 	re := regexp.MustCompile(`([^?]+?)\s*\?\?\s*(.+)`)
 	for re.MatchString(code) {
 		matches := re.FindStringSubmatch(code)
 		if len(matches) == 3 {
 			left := strings.TrimSpace(matches[1])
 			right := strings.TrimSpace(matches[2])
+			
+			// 对于嵌套属性访问，使用safeGet包装
+			if strings.Contains(left, ".") && !strings.Contains(left, "(") {
+				parts := strings.SplitN(left, ".", 2)
+				left = fmt.Sprintf(`safeGet(%s, "%s")`, parts[0], parts[1])
+			}
+			
+			// 对于数组索引访问，使用safeIndex包装
+			if strings.Contains(left, "[") && strings.Contains(left, "]") {
+				re2 := regexp.MustCompile(`(\w+)\[(\d+)\]`)
+				left = re2.ReplaceAllString(left, "safeIndex($1, $2)")
+			}
+			
 			// 递归处理右侧部分
 			right = preprocessNullCoalescing(right)
 			code = fmt.Sprintf("nullCoalesce(%s, %s)", left, right)
@@ -183,7 +173,24 @@ func evalExpr(code string, ctx map[string]any) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return expr.Run(program, env)
+	
+	result, err := expr.Run(program, env)
+	if err != nil {
+		// 对于数组越界访问，返回nil而不是错误
+		if strings.Contains(err.Error(), "index out of range") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	
+	// 检查除零错误 - 检查是否为无穷大或NaN
+	if f, ok := result.(float64); ok {
+		if math.IsInf(f, 0) || math.IsNaN(f) {
+			return nil, fmt.Errorf("division by zero")
+		}
+	}
+	
+	return result, nil
 }
 
 // evalBool 计算布尔表达式的值，支持真值判断
