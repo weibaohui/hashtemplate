@@ -24,7 +24,7 @@ func TestVariableInterpolation(t *testing.T) {
 		},
 		{
 			name:     "基本字符串插值 - #() 格式",
-			template: "Hello #(name)!",
+			template: "Hello ${name}!",
 			context:  map[string]any{"name": "Go"},
 			expected: "Hello Go!\n",
 		},
@@ -61,7 +61,7 @@ func TestVariableInterpolation(t *testing.T) {
 		},
 		{
 			name:     "混合格式插值",
-			template: "${name} has #(count) items",
+			template: "${name} has ${count} items",
 			context: map[string]any{
 				"name":  "Alice",
 				"count": 5,

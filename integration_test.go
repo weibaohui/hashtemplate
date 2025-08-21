@@ -28,7 +28,7 @@ metadata:
   labels:
     version: ${version ?? "v1.0.0"}
 spec:
-  replicas: #(replicas)
+  replicas: ${replicas}
   template:
     spec:
       containers:
