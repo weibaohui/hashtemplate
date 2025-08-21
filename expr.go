@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	expr "github.com/expr-lang/expr"
 )
@@ -124,11 +126,53 @@ func evalExpr(code string, ctx map[string]any) (any, error) {
 	// 预处理空安全运算符
 	code = preprocessNullCoalescing(code)
 
-	// 创建环境并添加自定义函数
+	// 创建环境并添加自定义函数和Go标准库函数
 	env := map[string]any{
 		"nullCoalesce": nullCoalesceFunc,
 		"safeGet":     safeGet,
 		"safeIndex":   safeIndex,
+		// strings 包函数
+		"strings": map[string]any{
+			"ToUpper":    strings.ToUpper,
+			"ToLower":    strings.ToLower,
+			"TrimSpace":  strings.TrimSpace,
+			"Contains":   strings.Contains,
+			"HasPrefix":  strings.HasPrefix,
+			"HasSuffix":  strings.HasSuffix,
+			"Replace":    strings.Replace,
+			"ReplaceAll": strings.ReplaceAll,
+			"Split":      strings.Split,
+			"Join":       strings.Join,
+			"Repeat":     strings.Repeat,
+		},
+		// strconv 包函数
+		"strconv": map[string]any{
+			"Atoi":     strconv.Atoi,
+			"Itoa":     strconv.Itoa,
+			"ParseInt": strconv.ParseInt,
+			"FormatInt": strconv.FormatInt,
+		},
+		// time 包函数
+		"time": map[string]any{
+			"Now": time.Now,
+		},
+		// 常用的全局函数
+		"len": func(v any) int {
+			switch val := v.(type) {
+			case string:
+				return len(val)
+			case []any:
+				return len(val)
+			case []string:
+				return len(val)
+			case []int:
+				return len(val)
+			case map[string]any:
+				return len(val)
+			default:
+				return 0
+			}
+		},
 	}
 	// 合并用户上下文
 	for k, v := range ctx {

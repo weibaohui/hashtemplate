@@ -138,6 +138,206 @@ func TestExpressionCalculation(t *testing.T) {
 			},
 			expected: "canAccess: true\n",
 		},
+		{
+			name:     "Go标准库 - strings.ToUpper",
+			template: "upperName: ${strings.ToUpper(appName)}",
+			context: map[string]any{
+				"appName": "hello-world",
+			},
+			expected: "upperName: HELLO-WORLD\n",
+		},
+		{
+			name:     "Go标准库 - strings.ToLower",
+			template: "lowerName: ${strings.ToLower(appName)}",
+			context: map[string]any{
+				"appName": "HELLO-WORLD",
+			},
+			expected: "lowerName: hello-world\n",
+		},
+		{
+			name:     "Go标准库 - strings.Contains",
+			template: "hasKeyword: ${strings.Contains(text, keyword)}",
+			context: map[string]any{
+				"text":    "Hello World",
+				"keyword": "World",
+			},
+			expected: "hasKeyword: true\n",
+		},
+		{
+			name:     "Go标准库 - strings.Replace",
+			template: "replaced: ${strings.Replace(text, old, new, 1)}",
+			context: map[string]any{
+				"text": "hello world hello",
+				"old":  "hello",
+				"new":  "hi",
+			},
+			expected: "replaced: hi world hello\n",
+		},
+		{
+			name:     "Go标准库 - strings.Split和len组合",
+			template: "wordCount: ${len(strings.Split(sentence, ' '))}",
+			context: map[string]any{
+				"sentence": "hello world from go",
+			},
+			expected: "wordCount: 4\n",
+		},
+		{
+			name:     "Go标准库 - strconv.Itoa",
+			template: "numberStr: ${strconv.Itoa(number)}",
+			context: map[string]any{
+				"number": 42,
+			},
+			expected: "numberStr: 42\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tpl, err := eng.ParseString(tt.template)
+			if err != nil {
+				t.Fatalf("解析模板失败: %v", err)
+			}
+
+			result, err := tpl.Render(tt.context)
+			if err != nil {
+				t.Fatalf("渲染模板失败: %v", err)
+			}
+
+			if result != tt.expected {
+				t.Errorf("期望: %q, 实际: %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestGoStandardLibrary 测试Go标准库函数调用
+func TestGoStandardLibrary(t *testing.T) {
+	loader := os.DirFS(".")
+	eng := New(loader)
+
+	tests := []struct {
+		name     string
+		template string
+		context  map[string]any
+		expected string
+	}{
+		{
+			name:     "strings.ToUpper - 转换为大写",
+			template: "upperName: ${strings.ToUpper(appName)}",
+			context: map[string]any{
+				"appName": "my-awesome-app",
+			},
+			expected: "upperName: MY-AWESOME-APP\n",
+		},
+		{
+			name:     "strings.ToLower - 转换为小写",
+			template: "lowerName: ${strings.ToLower(appName)}",
+			context: map[string]any{
+				"appName": "MY-AWESOME-APP",
+			},
+			expected: "lowerName: my-awesome-app\n",
+		},
+		{
+			name:     "strings.TrimSpace - 去除空格",
+			template: "trimmed: '${strings.TrimSpace(text)}'",
+			context: map[string]any{
+				"text": "  hello world  ",
+			},
+			expected: "trimmed: 'hello world'\n",
+		},
+		{
+			name:     "strings.Contains - 检查包含",
+			template: "contains: ${strings.Contains(text, keyword)}",
+			context: map[string]any{
+				"text":    "Hello Go Programming",
+				"keyword": "Go",
+			},
+			expected: "contains: true\n",
+		},
+		{
+			name:     "strings.HasPrefix - 检查前缀",
+			template: "hasPrefix: ${strings.HasPrefix(filename, prefix)}",
+			context: map[string]any{
+				"filename": "config.yaml",
+				"prefix":   "config",
+			},
+			expected: "hasPrefix: true\n",
+		},
+		{
+			name:     "strings.HasSuffix - 检查后缀",
+			template: "hasGoExt: ${strings.HasSuffix(filename, '.go')}",
+			context: map[string]any{
+				"filename": "main.go",
+			},
+			expected: "hasGoExt: true\n",
+		},
+		{
+			name:     "strings.ReplaceAll - 替换所有",
+			template: "replaced: ${strings.ReplaceAll(text, old, new)}",
+			context: map[string]any{
+				"text": "hello world hello universe",
+				"old":  "hello",
+				"new":  "hi",
+			},
+			expected: "replaced: hi world hi universe\n",
+		},
+		{
+			name:     "strings.Split - 分割字符串",
+			template: "parts: ${strings.Split(csv, ',')}",
+			context: map[string]any{
+				"csv": "apple,banana,cherry",
+			},
+			expected: "parts: [apple banana cherry]\n",
+		},
+		{
+			name:     "strings.Join - 连接字符串",
+			template: "joined: ${strings.Join(parts, ' | ')}",
+			context: map[string]any{
+				"parts": []string{"apple", "banana", "cherry"},
+			},
+			expected: "joined: apple | banana | cherry\n",
+		},
+		{
+			name:     "strings.Repeat - 重复字符串",
+			template: "repeated: ${strings.Repeat(char, count)}",
+			context: map[string]any{
+				"char":  "*",
+				"count": 5,
+			},
+			expected: "repeated: *****\n",
+		},
+		{
+			name:     "strconv.Itoa - 整数转字符串",
+			template: "numberStr: ${strconv.Itoa(number)}",
+			context: map[string]any{
+				"number": 12345,
+			},
+			expected: "numberStr: 12345\n",
+		},
+		{
+			name:     "组合使用 - 格式化名称",
+			template: "formattedName: ${strings.ToUpper(strings.ReplaceAll(name, ' ', '_'))}",
+			context: map[string]any{
+				"name": "hello world app",
+			},
+			expected: "formattedName: HELLO_WORLD_APP\n",
+		},
+		{
+			name:     "组合使用 - 文件名处理",
+			template: "isGoFile: ${strings.HasSuffix(strings.ToLower(filename), '.go')}",
+			context: map[string]any{
+				"filename": "MAIN.GO",
+			},
+			expected: "isGoFile: true\n",
+		},
+		{
+			name:     "组合使用 - 统计单词数",
+			template: "wordCount: ${len(strings.Split(strings.TrimSpace(text), ' '))}",
+			context: map[string]any{
+				"text": "  hello world from golang  ",
+			},
+			expected: "wordCount: 4\n",
+		},
 	}
 
 	for _, tt := range tests {
