@@ -359,6 +359,210 @@ func TestGoStandardLibrary(t *testing.T) {
 	}
 }
 
+// TestArrayOperations 测试数组操作和角标访问
+func TestArrayOperations(t *testing.T) {
+	loader := os.DirFS(".")
+	eng := New(loader)
+
+	tests := []struct {
+		name     string
+		template string
+		context  map[string]any
+		expected string
+	}{
+		{
+			name:     "数组角标访问 - 基本类型",
+			template: "first: ${items[0]}\nsecond: ${items[1]}\nthird: ${items[2]}",
+			context: map[string]any{
+				"items": []any{"apple", "banana", "cherry"},
+			},
+			expected: "first: apple\nsecond: banana\nthird: cherry\n",
+		},
+		{
+			name:     "数组角标访问 - 数字数组",
+			template: "first: ${numbers[0]}\nlast: ${numbers[2]}",
+			context: map[string]any{
+				"numbers": []any{10, 20, 30},
+			},
+			expected: "first: 10\nlast: 30\n",
+		},
+		{
+			name:     "对象数组角标访问 - 容器名称",
+			template: "firstContainer: ${containers[0].name}\nsecondContainer: ${containers[1].name}",
+			context: map[string]any{
+				"containers": []any{
+					map[string]any{"name": "web", "image": "nginx"},
+					map[string]any{"name": "db", "image": "mysql"},
+				},
+			},
+			expected: "firstContainer: web\nsecondContainer: db\n",
+		},
+		{
+			name:     "对象数组角标访问 - 嵌套属性",
+			template: "firstImage: ${containers[0].image}\nfirstPort: ${containers[0].ports[0]}",
+			context: map[string]any{
+				"containers": []any{
+					map[string]any{
+						"name":  "web",
+						"image": "nginx:1.21",
+						"ports": []any{80, 443},
+					},
+					map[string]any{
+						"name":  "api",
+						"image": "golang:1.19",
+						"ports": []any{8080},
+					},
+				},
+			},
+			expected: "firstImage: nginx:1.21\nfirstPort: 80\n",
+		},
+		{
+			name:     "数组长度和角标结合",
+			template: "count: ${len(items)}\nlast: ${items[len(items)-1]}",
+			context: map[string]any{
+				"items": []any{"first", "middle", "last"},
+			},
+			expected: "count: 3\nlast: last\n",
+		},
+		{
+			name:     "多维数组访问",
+			template: "matrix00: ${matrix[0][0]}\nmatrix11: ${matrix[1][1]}",
+			context: map[string]any{
+				"matrix": []any{
+					[]any{1, 2, 3},
+					[]any{4, 5, 6},
+					[]any{7, 8, 9},
+				},
+			},
+			expected: "matrix00: 1\nmatrix11: 5\n",
+		},
+		{
+			name:     "数组角标计算",
+			template: "item: ${items[index]}\nnextItem: ${items[index + 1]}",
+			context: map[string]any{
+				"items": []any{"zero", "one", "two", "three"},
+				"index": 1,
+			},
+			expected: "item: one\nnextItem: two\n",
+		},
+		{
+			name:     "用户数组访问",
+			template: "firstUser: ${users[0].name}\nfirstUserEmail: ${users[0].email}",
+			context: map[string]any{
+				"users": []any{
+					map[string]any{
+						"name":  "张三",
+						"email": "zhangsan@example.com",
+						"age":   25,
+					},
+					map[string]any{
+						"name":  "李四",
+						"email": "lisi@example.com",
+						"age":   30,
+					},
+				},
+			},
+			expected: "firstUser: 张三\nfirstUserEmail: zhangsan@example.com\n",
+		},
+		{
+			name:     "配置数组访问",
+			template: "dbHost: ${databases[0].host}\ndbPort: ${databases[0].port}",
+			context: map[string]any{
+				"databases": []any{
+					map[string]any{
+						"host": "localhost",
+						"port": 5432,
+						"name": "myapp",
+					},
+					map[string]any{
+						"host": "replica.db.com",
+						"port": 5432,
+						"name": "myapp_replica",
+					},
+				},
+			},
+			expected: "dbHost: localhost\ndbPort: 5432\n",
+		},
+		{
+			name:     "环境变量数组访问",
+			template: "firstEnv: ${envVars[0].name}=${envVars[0].value}",
+			context: map[string]any{
+				"envVars": []any{
+					map[string]any{"name": "NODE_ENV", "value": "production"},
+					map[string]any{"name": "PORT", "value": "3000"},
+				},
+			},
+			expected: "firstEnv: NODE_ENV=production\n",
+		},
+		{
+			name:     "数组角标与字符串操作结合",
+			template: "upperFirstName: ${strings.ToUpper(users[0].name)}",
+			context: map[string]any{
+				"users": []any{
+					map[string]any{"name": "alice"},
+					map[string]any{"name": "bob"},
+				},
+			},
+			expected: "upperFirstName: ALICE\n",
+		},
+		{
+			name:     "数组角标与数学运算结合",
+			template: "total: ${prices[0] + prices[1] + prices[2]}",
+			context: map[string]any{
+				"prices": []any{10.5, 20.0, 15.75},
+			},
+			expected: "total: 46.25\n",
+		},
+		{
+			name:     "安全数组访问 - 越界返回空",
+			template: "exists: ${items[1]}\nnotExists: ${items[10]}",
+			context: map[string]any{
+				"items": []any{"only-one"},
+			},
+			expected: "exists: \nnotExists: \n",
+		},
+		{
+			name:     "复杂对象数组访问",
+			template: "serviceName: ${services[0].metadata.name}\nservicePort: ${services[0].spec.ports[0].port}",
+			context: map[string]any{
+				"services": []any{
+					map[string]any{
+						"metadata": map[string]any{
+							"name":      "web-service",
+							"namespace": "default",
+						},
+						"spec": map[string]any{
+							"ports": []any{
+								map[string]any{"port": 80, "protocol": "TCP"},
+								map[string]any{"port": 443, "protocol": "TCP"},
+							},
+						},
+					},
+				},
+			},
+			expected: "serviceName: web-service\nservicePort: 80\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tpl, err := eng.ParseString(tt.template)
+			if err != nil {
+				t.Fatalf("解析模板失败: %v", err)
+			}
+
+			result, err := tpl.Render(tt.context)
+			if err != nil {
+				t.Fatalf("渲染模板失败: %v", err)
+			}
+
+			if result != tt.expected {
+				t.Errorf("期望: %q, 实际: %q", tt.expected, result)
+			}
+		})
+	}
+}
+
 // TestComplexExpressions 测试复杂表达式计算
 func TestComplexExpressions(t *testing.T) {
 	loader := os.DirFS(".")
