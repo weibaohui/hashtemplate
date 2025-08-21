@@ -70,9 +70,10 @@ ${key}: ${value}
 				"config": map[string]any{
 					"host": "localhost",
 					"port": 8080,
+					"ssl":  true,
 				},
 			},
-			expected: "host: localhost\nport: 8080\n", // 减少键值对数量以避免顺序问题
+			expected: "host: localhost\nport: 8080\nssl: true\n", // 减少键值对数量以避免顺序问题
 		},
 		{
 			name: "嵌套对象循环",
@@ -291,8 +292,8 @@ func TestLoopEdgeCases(t *testing.T) {
 		shouldError bool
 	}{
 		{
-			name:        "nil数组循环",
-			template:    `#for item in nullArray
+			name: "nil数组循环",
+			template: `#for item in nullArray
 Should not appear
 #end
 After loop`,
@@ -301,8 +302,8 @@ After loop`,
 			shouldError: true, // nil值应该报错
 		},
 		{
-			name:        "未定义变量循环",
-			template:    `#for item in undefinedVar
+			name: "未定义变量循环",
+			template: `#for item in undefinedVar
 Should not appear
 #end
 After loop`,
@@ -311,7 +312,7 @@ After loop`,
 			shouldError: true, // 未定义变量应该报错
 		},
 		{
-			name:     "空字符串循环",
+			name: "空字符串循环",
 			template: `#for char in emptyString
 Should not appear
 #end
@@ -320,7 +321,7 @@ After loop`,
 			expected: "After loop\n",
 		},
 		{
-			name:     "空Map循环",
+			name: "空Map循环",
 			template: `#for key, value in emptyMap
 Should not appear
 #end
@@ -329,7 +330,7 @@ After loop`,
 			expected: "After loop\n",
 		},
 		{
-			name:     "包含nil元素的数组",
+			name: "包含nil元素的数组",
 			template: `#for item in mixedArray
 Item: ${item}
 #end`,
@@ -339,7 +340,7 @@ Item: ${item}
 			expected: "Item: hello\nItem: \nItem: world\n",
 		},
 		{
-			name:     "循环变量名冲突",
+			name: "循环变量名冲突",
 			template: `Outer item: ${item}
 #for item in items
 Inner item: ${item}
