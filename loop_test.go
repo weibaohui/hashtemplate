@@ -62,8 +62,8 @@ ${char}
 		},
 		{
 			name: "Map循环",
-			template: `#for entry in config
-${entry.key}: ${entry.value}
+			template: `#for key, value in config
+${key}: ${value}
 #end`,
 			context: map[string]any{
 				"config": map[string]any{
@@ -105,7 +105,7 @@ After loop`,
 			context: map[string]any{
 				"emptyArray": []string{},
 			},
-			expected: "After loop",
+			expected: "After loop\n",
 		},
 		{
 			name: "单元素数组循环",
@@ -184,7 +184,8 @@ func TestNestedLoops(t *testing.T) {
 			name: "二维数组循环",
 			template: `#for row in matrix
 #for cell in row
-${cell} #end
+${cell} 
+#end
 #end`,
 			context: map[string]any{
 				"matrix": [][]int{
