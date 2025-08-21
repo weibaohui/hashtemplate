@@ -54,7 +54,7 @@ func main() {
     templateStr := `
 应用名称: ${appName}
 版本: ${version ?? "v1.0.0"}
-副本数: #{replicas}
+副本数: ${replicas}
 `
     
     // 解析模板
@@ -84,15 +84,13 @@ func main() {
 
 ### 1. 表达式语法
 
-Envoy 支持两种表达式语法：
 
 - `${expression}` - 标准表达式语法
-- `#(expression)` - 简化表达式语法
 
 ```yaml
 # 基本变量替换
 name: ${appName}
-port: #(port)
+port: ${port}
 
 # 支持嵌套属性访问
 image: ${container.image}
@@ -218,7 +216,7 @@ metadata:
     app: ${appName}
     version: ${version ?? "v1.0.0"}
 spec:
-  replicas: #(replicas)
+  replicas: ${replicas}
   selector:
     matchLabels:
       app: ${appName}
@@ -352,8 +350,8 @@ Envoy 基于 [expr-lang/expr](https://github.com/expr-lang/expr) 库，支持丰
 
 ```yaml
 # 数学运算
-total: #(price * quantity)
-discount: #(total * 0.1)
+total: ${price * quantity}
+discount: ${total * 0.1}
 
 # 字符串操作
 fullName: ${firstName + " " + lastName}
@@ -364,7 +362,7 @@ status: ${replicas > 1 ? "HA" : "Single"}
 
 # 数组操作
 firstContainer: ${containers[0].name}
-containerCount: #(len(containers))
+containerCount: ${len(containers)}
 ```
 
 ### 2. 安全的属性访问
@@ -384,7 +382,7 @@ firstPort: ${container.ports[0] ?? 8080}
 
 ```yaml
 # 自动类型转换
-replicas: #(string(replicas))
+replicas: ${string(replicas)}
 enabled: ${string(enableFeature)}
 ```
 
