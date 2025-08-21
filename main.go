@@ -77,8 +77,6 @@ spec:
 		},
 	}
 
-	// Prepare an included snippet file at runtime for the demo
-	_ = writeFileIfMissing("snippet.tpl", "# Simple include demo\n#(appName) included!\n")
 
 	out, err := tpl.Render(ctx)
 	must(err)
