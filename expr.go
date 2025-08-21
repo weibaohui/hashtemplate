@@ -27,7 +27,6 @@ func nullCoalesceFunc(a, b any) any {
 // preprocessNullCoalescing 预处理空安全运算符 ??
 // 将 "a ?? b" 转换为 "nullCoalesce(a, b)"
 func preprocessNullCoalescing(code string) string {
-	
 	// 处理 ?? 运算符 - 递归处理所有的 ?? 运算符
 	re := regexp.MustCompile(`([^?]+?)\s*\?\?\s*(.+)`)
 	for re.MatchString(code) {
@@ -55,7 +54,6 @@ func preprocessNullCoalescing(code string) string {
 		}
 	}
 	
-
 	return code
 }
 
@@ -231,4 +229,25 @@ func evalBool(code string, ctx map[string]any) (bool, error) {
 		// 其他类型默认为真
 		return true, nil
 	}
+}
+
+// isInLoopContext 检查是否在循环上下文中
+// 通过检查上下文中是否有特殊的循环标记来判断
+func isInLoopContext(ctx map[string]any) bool {
+	_, exists := ctx["__in_loop__"]
+	return exists
+}
+
+// preprocessNestedAccess 预处理嵌套属性访问，将其转换为safeGet调用
+func preprocessNestedAccess(code string) string {
+	// 匹配 obj.prop.subprop 形式的嵌套属性访问
+	nestedPropRe := regexp.MustCompile(`(\w+)\.(\w+(?:\.\w+)*)`)
+	return nestedPropRe.ReplaceAllStringFunc(code, func(match string) string {
+		// 跳过已经是函数调用的情况
+		if strings.Contains(match, "(") {
+			return match
+		}
+		parts := strings.SplitN(match, ".", 2)
+		return fmt.Sprintf(`safeGet(%s, "%s")`, parts[0], parts[1])
+	})
 }

@@ -26,7 +26,13 @@ type exprNode struct{ code string }
 
 // render 渲染表达式节点
 func (n *exprNode) render(sb *strings.Builder, _ *Engine, ctx map[string]any) error {
-	val, err := evalExpr(n.code, ctx)
+	// 检查是否在循环上下文中，如果是，则对嵌套属性访问进行安全包装
+	code := n.code
+	if isInLoopContext(ctx) {
+		code = preprocessNestedAccess(code)
+	}
+	
+	val, err := evalExpr(code, ctx)
 	if err != nil {
 		return err
 	}
@@ -81,8 +87,8 @@ func (n *forNode) render(sb *strings.Builder, eng *Engine, ctx map[string]any) e
 	}
 
 	// 保存原始变量值以恢复作用域
-	var originalVar1, originalVar2 any
-	var hasVar1, hasVar2 bool
+	var originalVar1, originalVar2, originalLoopMarker any
+	var hasVar1, hasVar2, hasLoopMarker bool
 	if originalVar1, hasVar1 = ctx[n.varName]; hasVar1 {
 		// 保存原始值
 	}
@@ -91,6 +97,13 @@ func (n *forNode) render(sb *strings.Builder, eng *Engine, ctx map[string]any) e
 			// 保存原始值
 		}
 	}
+	// 保存循环标记
+	if originalLoopMarker, hasLoopMarker = ctx["__in_loop__"]; hasLoopMarker {
+		// 保存原始值
+	}
+
+	// 设置循环上下文标记
+	ctx["__in_loop__"] = true
 
 	// 确保在函数结束时恢复原始变量值
 	defer func() {
@@ -105,6 +118,12 @@ func (n *forNode) render(sb *strings.Builder, eng *Engine, ctx map[string]any) e
 			} else {
 				delete(ctx, n.varName2)
 			}
+		}
+		// 恢复循环标记
+		if hasLoopMarker {
+			ctx["__in_loop__"] = originalLoopMarker
+		} else {
+			delete(ctx, "__in_loop__")
 		}
 	}()
 
