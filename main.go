@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -48,7 +47,7 @@ spec:
   - host: $(ingress.host ?? "localhost")
     http: { }
 #end
-#include "snippet.tpl"`
+`
 
 	// Note: we support both $(...) and ${...} & #( ... ) formats.
 	// For convenience, alias $(...) to ${...}
@@ -58,7 +57,9 @@ spec:
 	tplStr = re.ReplaceAllString(tplStr, "${$1}")
 
 	tpl, err := eng.ParseString(tplStr)
-	must(err)
+	if err != nil {
+		panic(err)
+	}
 
 	ctx := map[string]any{
 		"appName":       "demo-app",
@@ -77,55 +78,11 @@ spec:
 		},
 	}
 
-
-	out, err := tpl.Render(ctx)
-	must(err)
-
-	// Print result
-	w := bufio.NewWriter(os.Stdout)
-	_, _ = w.WriteString(out)
-	_ = w.Flush()
-
-	// 额外测试空安全运算符的各种用法
-	fmt.Println("\n=== 空安全运算符测试 ===")
-	testTemplate := `
-测试结果:
-1. 基本 ?? 运算符: ${name ?? "匿名用户"}
-2. 嵌套字段: ${user.email ?? "no-email@example.com"}
-3. 描述字段: ${description ?? "无描述"}
-4. 数字默认值: ${count ?? 0}
-5. 空字符串处理: ${emptyField ?? "默认值"}
-`
-
-	testTpl, err := eng.ParseString(testTemplate)
-	must(err)
-
-	// 测试上下文 - 故意省略一些字段来演示默认值
-	testCtx := map[string]any{
-		"name": "张三",
-		"user": map[string]any{
-			// 故意省略 email 字段
-		},
-		// 故意省略 description, count
-		"emptyField": "", // 空字符串测试
+	if out, err := tpl.Render(ctx); err == nil {
+		// Print result
+		w := bufio.NewWriter(os.Stdout)
+		_, _ = w.WriteString(out)
+		_ = w.Flush()
 	}
 
-	testOut, err := testTpl.Render(testCtx)
-	must(err)
-	fmt.Print(testOut)
-}
-
-// must 错误处理辅助函数
-func must(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-// writeFileIfMissing 如果文件不存在则创建文件
-func writeFileIfMissing(path, content string) error {
-	if _, err := os.Stat(path); err == nil {
-		return nil
-	}
-	return os.WriteFile(path, []byte(content), 0644)
 }
