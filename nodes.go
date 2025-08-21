@@ -73,12 +73,40 @@ type forNode struct {
 	body     []node
 }
 
-// render 方法渲染 for 循环节点，支持迭代多种数据类型
+// render 渲染for循环节点
 func (n *forNode) render(sb *strings.Builder, eng *Engine, ctx map[string]any) error {
 	val, err := evalExpr(n.iter, ctx)
 	if err != nil {
 		return fmt.Errorf("#for eval failed: %w", err)
 	}
+
+	// 保存原始变量值以恢复作用域
+	var originalVar1, originalVar2 any
+	var hasVar1, hasVar2 bool
+	if originalVar1, hasVar1 = ctx[n.varName]; hasVar1 {
+		// 保存原始值
+	}
+	if n.varName2 != "" {
+		if originalVar2, hasVar2 = ctx[n.varName2]; hasVar2 {
+			// 保存原始值
+		}
+	}
+
+	// 确保在函数结束时恢复原始变量值
+	defer func() {
+		if hasVar1 {
+			ctx[n.varName] = originalVar1
+		} else {
+			delete(ctx, n.varName)
+		}
+		if n.varName2 != "" {
+			if hasVar2 {
+				ctx[n.varName2] = originalVar2
+			} else {
+				delete(ctx, n.varName2)
+			}
+		}
+	}()
 
 	switch v := val.(type) {
 	case []any:
@@ -130,6 +158,22 @@ func (n *forNode) render(sb *strings.Builder, eng *Engine, ctx map[string]any) e
 			}
 		}
 	case []map[string]any:
+		for i, item := range v {
+			if n.varName2 != "" {
+				// key, value 语法
+				ctx[n.varName] = i
+				ctx[n.varName2] = item
+			} else {
+				// 单变量语法
+				ctx[n.varName] = item
+			}
+			for _, c := range n.body {
+				if err := c.render(sb, eng, ctx); err != nil {
+					return err
+				}
+			}
+		}
+	case [][]int:
 		for i, item := range v {
 			if n.varName2 != "" {
 				// key, value 语法
