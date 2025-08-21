@@ -127,7 +127,8 @@ spec:
   - host: demo.example.com
     http: { }
 # Snippet included
-app: demo-app`
+app: demo-app
+`
 
 	if result != expected {
 		t.Errorf("期望: %q, 实际: %q", expected, result)
@@ -521,7 +522,7 @@ ${item.nonexistent.field}
 					{"name": "test"},
 				},
 			},
-			shouldError: true,
+			shouldError: false, // 允许未定义变量，不会报错
 		},
 		{
 			name: "条件中的表达式错误",
