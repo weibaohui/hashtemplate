@@ -65,9 +65,10 @@ func (n *ifNode) render(sb *strings.Builder, eng *Engine, ctx map[string]any) er
 
 // forNode 循环节点
 type forNode struct {
-	varName string
-	iter    string // expression that should evaluate to slice/array/map/string
-	body    []node
+	varName  string // 第一个变量名（或唯一变量名）
+	varName2 string // 第二个变量名（用于 key, value 语法）
+	iter     string // expression that should evaluate to slice/array/map/string
+	body     []node
 }
 
 // render 方法渲染 for 循环节点，支持迭代多种数据类型
@@ -96,6 +97,15 @@ func (n *forNode) render(sb *strings.Builder, eng *Engine, ctx map[string]any) e
 			}
 		}
 	case []int:
+		for _, item := range v {
+			ctx[n.varName] = item
+			for _, c := range n.body {
+				if err := c.render(sb, eng, ctx); err != nil {
+					return err
+				}
+			}
+		}
+	case []map[string]any:
 		for _, item := range v {
 			ctx[n.varName] = item
 			for _, c := range n.body {

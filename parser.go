@@ -24,7 +24,7 @@ var (
 	reIf      = regexp.MustCompile(`^\s*#if\s+(.+)$`)
 	reElse    = regexp.MustCompile(`^\s*#else\s*$`)
 	reEnd     = regexp.MustCompile(`^\s*#end\s*$`)
-	reFor     = regexp.MustCompile(`^\s*#for\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+in\s+(.+)$`)
+	reFor     = regexp.MustCompile(`^\s*#for\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\s*,\s*[a-zA-Z_][a-zA-Z0-9_]*)?)\s+in\s+(.+)$`)
 	reInclude = regexp.MustCompile(`^\s*#include\s+"([^"]+)"\s*$`)
 )
 
@@ -45,14 +45,25 @@ func (p *parser) parse() ([]node, error) {
 			continue
 		}
 
-		// Directive: #for x in expr
+		// Directive: #for x in expr 或 #for key, value in expr
 		if m := reFor.FindStringSubmatch(line); m != nil {
 			p.cursor++
 			body, err := p.parseUntilEnd()
 			if err != nil {
 				return nil, err
 			}
-			nodes = append(nodes, &forNode{varName: m[1], iter: m[2], body: body})
+			
+			// 解析变量名，支持 key, value 语法
+			vars := strings.Split(m[1], ",")
+			var varName, varName2 string
+			if len(vars) == 1 {
+				varName = strings.TrimSpace(vars[0])
+			} else if len(vars) == 2 {
+				varName = strings.TrimSpace(vars[0])
+				varName2 = strings.TrimSpace(vars[1])
+			}
+			
+			nodes = append(nodes, &forNode{varName: varName, varName2: varName2, iter: m[2], body: body})
 			continue
 		}
 

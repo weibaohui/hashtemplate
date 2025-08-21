@@ -94,7 +94,7 @@ spec:
 测试结果:
 1. 基本 ?? 运算符: ${name ?? "匿名用户"}
 2. 嵌套字段: ${user.email ?? "no-email@example.com"}
-3. default函数: ${default(description, "无描述")}
+3. 描述字段: ${description ?? "无描述"}
 4. 数字默认值: ${count ?? 0}
 5. 空字符串处理: ${emptyField ?? "默认值"}
 `
