@@ -452,9 +452,6 @@ development:
 		t.Fatalf("渲染配置模板失败: %v", err)
 	}
 	
-	// 调试输出
-	t.Logf("实际渲染结果:\n%s", result)
-
 	// 验证结果包含期望的配置内容
 	expectedContents := []string{
 		"name: MyApp",

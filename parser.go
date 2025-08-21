@@ -114,7 +114,18 @@ func (p *parser) parseIfBlocks(cond string) (thenBlock, elseBlock []node, err er
 			if err != nil {
 				return nil, nil, err
 			}
-			thenBlock = append(thenBlock, &forNode{varName: m[1], iter: m[2], body: body})
+			
+			// 解析变量名，支持 key, value 语法
+			vars := strings.Split(m[1], ",")
+			var varName, varName2 string
+			if len(vars) == 1 {
+				varName = strings.TrimSpace(vars[0])
+			} else if len(vars) == 2 {
+				varName = strings.TrimSpace(vars[0])
+				varName2 = strings.TrimSpace(vars[1])
+			}
+			
+			thenBlock = append(thenBlock, &forNode{varName: varName, varName2: varName2, iter: m[2], body: body})
 			continue
 		}
 		if m := reInclude.FindStringSubmatch(line); m != nil {
@@ -155,7 +166,18 @@ func (p *parser) parseUntilEnd() ([]node, error) {
 			if err != nil {
 				return nil, err
 			}
-			nodes = append(nodes, &forNode{varName: m[1], iter: m[2], body: body})
+			
+			// 解析变量名，支持 key, value 语法
+			vars := strings.Split(m[1], ",")
+			var varName, varName2 string
+			if len(vars) == 1 {
+				varName = strings.TrimSpace(vars[0])
+			} else if len(vars) == 2 {
+				varName = strings.TrimSpace(vars[0])
+				varName2 = strings.TrimSpace(vars[1])
+			}
+			
+			nodes = append(nodes, &forNode{varName: varName, varName2: varName2, iter: m[2], body: body})
 			continue
 		}
 		if m := reInclude.FindStringSubmatch(line); m != nil {
