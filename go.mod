@@ -1,4 +1,4 @@
-module github.com/weibaohui/envoy
+module github.com/weibaohui/htpl
 
 go 1.24.0
 

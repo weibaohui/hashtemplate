@@ -9,7 +9,7 @@
 *.so
 *.dylib
 .idea
-envoy
+hashtemplate
 # Test binary, built with `go test -c`
 *.test
 

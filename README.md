@@ -1,8 +1,8 @@
-# Envoy 模板引擎使用教程
+# Hash Template 模板引擎使用教程
 
 ## 项目简介
 
-Envoy 是一个功能强大的 Go 语言模板引擎，专为配置文件生成和文本模板处理而设计。它支持条件语句、循环、表达式求值、空安全运算符等高级功能，特别适用于 Kubernetes 配置文件、配置模板等场景。
+Hash Template 是一个功能强大的 Go 语言模板引擎，专为配置文件生成和文本模板处理而设计。它支持条件语句、循环、表达式求值、空安全运算符等高级功能，特别适用于 Kubernetes 配置文件、配置模板等场景。
 
 ## 主要特性
 
@@ -22,8 +22,8 @@ Envoy 是一个功能强大的 Go 语言模板引擎，专为配置文件生成�
 ### 获取代码
 
 ```bash
-git clone https://github.com/weibaohui/envoy.git
-cd envoy
+git clone https://github.com/weibaohui/hashtemplate.git
+cd hashtemplate
 go mod tidy
 ```
 
@@ -346,7 +346,7 @@ type Template struct {
 
 ### 1. 表达式求值
 
-Envoy 基于 [expr-lang/expr](https://github.com/expr-lang/expr) 库，支持丰富的表达式功能：
+HashTemplate 基于 [expr-lang/expr](https://github.com/expr-lang/expr) 库，支持丰富的表达式功能：
 
 ```yaml
 # 数学运算
@@ -367,7 +367,7 @@ containerCount: ${len(containers)}
 
 ### 2. 安全的属性访问
 
-Envoy 提供了安全的嵌套属性访问，避免空指针异常：
+HashTemplate 提供了安全的嵌套属性访问，避免空指针异常：
 
 ```yaml
 # 安全访问嵌套属性
